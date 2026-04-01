@@ -1,0 +1,20 @@
+# Runtime log output
+logs/
+**/logs/
+*.log
+
+# macOS
+.DS_Store
+
+# Go build artifacts
+*.test
+*.out
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude Code project instructions (internal tool config)
+CLAUDE.md
