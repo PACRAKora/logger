@@ -24,8 +24,10 @@ type Event struct {
 	// Location/context fields
 	Function   string `json:"function,omitempty"`
 	ErrorPath  string `json:"error_path,omitempty"`
-	RetryCount int    `json:"retry_count,omitempty"`
-	DurationMs int64  `json:"duration_ms,omitempty"`
+	RetryCount       int    `json:"retry_count,omitempty"`
+	DurationMs       int64  `json:"duration_ms,omitempty"`
+	SubscribeSubject string `json:"subscribe_subject,omitempty"`
+	PublishSubject   string `json:"publish_subject,omitempty"`
 
 	// Additional structured context
 	// what is the metadata of the event?

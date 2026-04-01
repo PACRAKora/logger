@@ -81,6 +81,20 @@ func WithRetryCount(count int) Option {
 	}
 }
 
+// WithSubscribeSubject sets the NATS subject the service consumed this event from.
+func WithSubscribeSubject(subject string) Option {
+	return func(e *Event) {
+		e.SubscribeSubject = subject
+	}
+}
+
+// WithPublishSubject sets the NATS subject the service is publishing this event to.
+func WithPublishSubject(subject string) Option {
+	return func(e *Event) {
+		e.PublishSubject = subject
+	}
+}
+
 // WithException populates the structured exception field.
 // If err is nil, this option does nothing.
 func WithException(err error) Option {
@@ -129,7 +143,7 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 	}
 
 	logger := Logger()
-	event := logger.With().
+	ze := logger.With().
 		Str("trace_id", ev.TraceID).
 		Str("function", ev.Function).
 		Str("error_path", ev.ErrorPath).
@@ -139,6 +153,14 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 		Interface("metadata", redactMap(cfg.RedactKeys, ev.Metadata)).
 		Interface("exception", ev.Exception).
 		Logger()
+
+	if ev.SubscribeSubject != "" {
+		ze = ze.With().Str("subscribe_subject", ev.SubscribeSubject).Logger()
+	}
+	if ev.PublishSubject != "" {
+		ze = ze.With().Str("publish_subject", ev.PublishSubject).Logger()
+	}
+	event := ze
 
 	switch level {
 	case zerolog.InfoLevel:
