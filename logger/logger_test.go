@@ -63,21 +63,19 @@ func TestLogIncludesStrategyFieldsAndRedactsMetadata(t *testing.T) {
 	tmp := t.TempDir()
 
 	InitConfig(Config{
-		Service:        "test-service",
-		Env:            "test",
-		ServiceVersion: "1.2.3",
-		LogDir:         tmp,
-		EnableFile:     true,
-		ConsoleJSON:    true,
-		EnableSeq:      false,
-		RedactKeys:     []string{"token", "password"},
+		Service:     "test-service",
+		Env:         "test",
+		LogDir:      tmp,
+		EnableFile:  true,
+		ConsoleJSON: true,
+		EnableSeq:   false,
+		RedactKeys:  []string{"token", "password"},
 	})
 
 	ctx := context.Background()
 	ctx = WithTraceID(ctx, "corr-123")
 
 	Warn(ctx, "fn", "/path", "something happened",
-		WithComponent("Participant"),
 		WithEvent("SagaStepRetrying"),
 		WithDurationMs(10),
 		WithMetadata(map[string]any{
@@ -90,9 +88,7 @@ func TestLogIncludesStrategyFieldsAndRedactsMetadata(t *testing.T) {
 
 	assertEq(t, ev["service"], "test-service")
 	assertEq(t, ev["environment"], "test")
-	assertEq(t, ev["service_version"], "1.2.3")
 	assertEq(t, ev["trace_id"], "corr-123")
-	assertEq(t, ev["component"], "Participant")
 	assertEq(t, ev["event"], "SagaStepRetrying")
 	assertEq(t, ev["function"], "fn")
 	assertEq(t, ev["error_path"], "/path")
@@ -403,40 +399,6 @@ func TestWithRetryCountApplied(t *testing.T) {
 		Info(context.Background(), "fn", "msg", WithRetryCount(3))
 	})
 	assertEq(t, ev["retry_count"], float64(3))
-}
-
-func TestWithTopicApplied(t *testing.T) {
-	ev := captureLastEvent(t, Config{
-		Service:     "svc",
-		Env:         "test",
-		ConsoleJSON: true,
-	}, func() {
-		Info(context.Background(), "fn", "msg", WithTopic("orders"))
-	})
-	assertEq(t, ev["topic"], "orders")
-}
-
-func TestWithMessageIDApplied(t *testing.T) {
-	ev := captureLastEvent(t, Config{
-		Service:     "svc",
-		Env:         "test",
-		ConsoleJSON: true,
-	}, func() {
-		Info(context.Background(), "fn", "msg", WithMessageID("msg-999"))
-	})
-	assertEq(t, ev["message_id"], "msg-999")
-}
-
-func TestWithTraceApplied(t *testing.T) {
-	ev := captureLastEvent(t, Config{
-		Service:     "svc",
-		Env:         "test",
-		ConsoleJSON: true,
-	}, func() {
-		Info(context.Background(), "fn", "msg", WithTrace("trace-abc", "span-xyz"))
-	})
-	assertEq(t, ev["trace_id"], "trace-abc")
-	assertEq(t, ev["span_id"], "span-xyz")
 }
 
 func TestWithExceptionApplied(t *testing.T) {

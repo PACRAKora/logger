@@ -18,10 +18,6 @@ type Config struct {
 	// CONFIGURABLE
 	Env string
 
-	// ServiceVersion is the deployed version identifier (e.g. semantic version or git SHA).
-	// CONFIGURABLE
-	ServiceVersion string
-
 	// RedactKeys are case-insensitive field names that should be redacted from metadata/properties.
 	// Example: ["password", "token", "authorization", "ssn"].
 	// CONFIGURABLE

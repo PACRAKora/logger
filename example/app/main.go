@@ -14,11 +14,10 @@ func main() {
 	// Set EnableFile: true to write logs to a file (e.g. for local dev or VM deployments).
 	logging.InitConfig(logging.Config{
 		// CONFIGURABLE: Set from your service configuration.
-		Service:        "pacra-logger-example",
-		Env:            "development",
-		ServiceVersion: "0.1.0",
-		ConsoleJSON:    false,
-		RedactKeys:     []string{"password", "token", "authorization", "api_key", "card_number", "cvv"},
+		Service:     "pacra-logger-example",
+		Env:         "development",
+		ConsoleJSON: false,
+		RedactKeys:  []string{"password", "token", "authorization", "api_key", "card_number", "cvv"},
 
 		// CONFIGURABLE: Time format for pretty console output.
 		TimeFormat: time.RFC3339,
@@ -31,9 +30,6 @@ func main() {
 
 	logging.Warn(ctx, "processMessage", "/handlers/processMessage", "retrying message",
 		logging.WithEvent("SagaStepRetrying"),
-		logging.WithComponent("Participant"),
-		logging.WithTopic("orders"),
-		logging.WithMessageID("msg-123"),
 		logging.WithRetryCount(1),
 		logging.WithDurationMs(245),
 		logging.WithMetadata(map[string]any{"order_id": "order-2024-001"}),
@@ -41,16 +37,12 @@ func main() {
 
 	logging.Error(ctx, "processMessage", "/handlers/processMessage", "failed to handle message",
 		logging.WithEvent("SagaStepFailed"),
-		logging.WithComponent("Participant"),
-		logging.WithTopic("orders"),
-		logging.WithMessageID("msg-123"),
 		logging.WithRetryCount(3),
 		logging.WithException(errors.New("payment gateway timeout")),
 	)
 
 	logging.Critical(ctx, "processMessage", "/handlers/processMessage", "compensation failed",
 		logging.WithEvent("CompensationFailed"),
-		logging.WithComponent("Orchestrator"),
 		logging.WithException(errors.New("compensation outbox unavailable")),
 	)
 }

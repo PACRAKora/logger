@@ -17,7 +17,6 @@ func WithTraceFromContext(ctx context.Context) Option {
 			return
 		}
 		e.TraceID = sc.TraceID().String()
-		e.SpanID = sc.SpanID().String()
 	}
 }
 

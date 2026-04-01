@@ -53,20 +53,6 @@ func WithEnvironment(env string) Option {
 	}
 }
 
-// WithServiceVersion sets the service version, overriding the config default.
-func WithServiceVersion(v string) Option {
-	return func(e *Event) {
-		e.ServiceVersion = v
-	}
-}
-
-// WithComponent sets the architectural component (e.g. "Orchestrator", "Participant").
-func WithComponent(component string) Option {
-	return func(e *Event) {
-		e.Component = component
-	}
-}
-
 // WithEvent sets the canonical event field.
 func WithEvent(evName string) Option {
 	return func(e *Event) {
@@ -85,35 +71,6 @@ func WithMetadata(metadata map[string]any) Option {
 func WithDurationMs(ms int64) Option {
 	return func(e *Event) {
 		e.DurationMs = ms
-	}
-}
-
-// WithTopic records the message broker topic associated with the event.
-func WithTopic(topic string) Option {
-	return func(e *Event) {
-		e.Topic = topic
-	}
-}
-
-// WithMessageID records the message broker message ID.
-func WithMessageID(id string) Option {
-	return func(e *Event) {
-		e.MessageID = id
-	}
-}
-
-// WithTrace manually sets trace_id and span_id (use WithTraceFromContext for OTel).
-func WithTrace(traceID, spanID string) Option {
-	return func(e *Event) {
-		e.TraceID = traceID
-		e.SpanID = spanID
-	}
-}
-
-// WithPayloadID records the payload identifier.
-func WithPayloadID(id string) Option {
-	return func(e *Event) {
-		e.PayloadID = id
 	}
 }
 
@@ -153,12 +110,11 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 	_ = ctx // context is used for ID propagation; retained for future extension.
 
 	ev := &Event{
-		Service:        cfg.Service,
-		ServiceVersion: cfg.ServiceVersion,
-		Environment:    cfg.Env,
-		TraceID:        traceID,
-		Function:       fnName,
-		ErrorPath:      errorPath,
+		Service:     cfg.Service,
+		Environment: cfg.Env,
+		TraceID:     traceID,
+		Function:    fnName,
+		ErrorPath:   errorPath,
 	}
 
 	for _, opt := range opts {
@@ -167,25 +123,17 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 		}
 	}
 
-	// Ensure environment/service_version are always present even if options override to empty.
+	// Ensure environment is always present even if options override to empty.
 	if ev.Environment == "" {
 		ev.Environment = cfg.Env
-	}
-	if ev.ServiceVersion == "" {
-		ev.ServiceVersion = cfg.ServiceVersion
 	}
 
 	logger := Logger()
 	event := logger.With().
 		Str("trace_id", ev.TraceID).
-		Str("component", ev.Component).
 		Str("function", ev.Function).
 		Str("error_path", ev.ErrorPath).
 		Str("event", ev.Event).
-		Str("topic", ev.Topic).
-		Str("message_id", ev.MessageID).
-		Str("span_id", ev.SpanID).
-		Str("payload_id", ev.PayloadID).
 		Int("retry_count", ev.RetryCount).
 		Int64("duration_ms", ev.DurationMs).
 		Interface("metadata", redactMap(cfg.RedactKeys, ev.Metadata)).

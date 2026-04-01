@@ -66,7 +66,6 @@ func initLogger() {
 		Timestamp().
 		Str("service", cfg.Service).
 		Str("environment", cfg.Env).
-		Str("service_version", cfg.ServiceVersion).
 		Logger()
 	loggerInitialized = true
 }
