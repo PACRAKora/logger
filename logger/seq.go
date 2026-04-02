@@ -3,24 +3,12 @@ package logger
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/rs/zerolog"
 )
-
-// seqEventPayload represents the payload format expected by Seq's raw events API.
-// EXTENSION POINT: Extend this struct to support more Seq features (properties, exception, etc.).
-type seqEventPayload struct {
-	Events []seqEvent `json:"Events"`
-}
-
-type seqEvent struct {
-	Timestamp time.Time              `json:"Timestamp"`
-	Level     string                 `json:"Level"`
-	Message   string                 `json:"MessageTemplate"`
-	Properties map[string]any        `json:"Properties,omitempty"`
-}
 
 // seqWriter implements zerolog.LevelWriter for sending events to Seq.
 type seqWriter struct {
@@ -44,7 +32,7 @@ func newSeqWriter(cfg Config) zerolog.LevelWriter {
 
 	return &seqWriter{
 		client:  client,
-		url:     cfg.SeqURL + "/api/events/raw",
+		url:     cfg.SeqURL + "/ingest/clef",
 		apiKey:  cfg.SeqAPIKey,
 		service: cfg.Service,
 		redactKeys: cfg.RedactKeys,
@@ -68,22 +56,35 @@ func (w *seqWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
 	pCopy := bytes.Clone(p)
 	// Perform HTTP request asynchronously so logging does not block the main flow.
 	go func() {
-		var properties map[string]any
-		_ = json.Unmarshal(pCopy, &properties) // ignore error; fall back to empty map
-		properties = redactMap(w.redactKeys, properties)
+		var event map[string]any
+		_ = json.Unmarshal(pCopy, &event) // ignore error; fall back to empty map
+		event = redactMap(w.redactKeys, event)
 
-		payload := seqEventPayload{
-			Events: []seqEvent{
-				{
-					Timestamp: time.Now().UTC(),
-					Level:     level.String(),
-					Message:   "{Message}", // generic message template
-					Properties: properties,
-				},
-			},
+		// Remap zerolog fields to CLEF reserved fields.
+		if ts, ok := event["time"].(string); ok {
+			event["@t"] = ts
+		} else {
+			event["@t"] = time.Now().UTC().Format(time.RFC3339Nano)
+		}
+		delete(event, "time")
+
+		if msg, ok := event["message"].(string); ok {
+			event["@m"] = msg
+		}
+		delete(event, "message")
+
+		event["@l"] = zeroToSeqLevel(level)
+		delete(event, "level")
+
+		if exc, ok := event["exception"].(map[string]any); ok {
+			t, _ := exc["type"].(string)
+			m, _ := exc["message"].(string)
+			s, _ := exc["stack"].(string)
+			event["@x"] = fmt.Sprintf("%s: %s\n%s", t, m, s)
+			delete(event, "exception")
 		}
 
-		body, err := json.Marshal(payload)
+		body, err := json.Marshal(event)
 		if err != nil {
 			return
 		}
@@ -92,7 +93,7 @@ func (w *seqWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
 		if err != nil {
 			return
 		}
-		req.Header.Set("Content-Type", "application/vnd.serilog.events+json")
+		req.Header.Set("Content-Type", "application/vnd.serilog.clef")
 		if w.apiKey != "" {
 			req.Header.Set("X-Seq-ApiKey", w.apiKey)
 		}
@@ -106,5 +107,23 @@ func (w *seqWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
 	}()
 
 	return len(p), nil
+}
+
+// zeroToSeqLevel maps zerolog levels to Serilog/Seq level names used in CLEF.
+func zeroToSeqLevel(level zerolog.Level) string {
+	switch level {
+	case zerolog.TraceLevel:
+		return "Verbose"
+	case zerolog.DebugLevel:
+		return "Debug"
+	case zerolog.InfoLevel:
+		return "Information"
+	case zerolog.WarnLevel:
+		return "Warning"
+	case zerolog.ErrorLevel:
+		return "Error"
+	default:
+		return "Fatal"
+	}
 }
 
