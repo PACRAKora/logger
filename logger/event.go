@@ -28,6 +28,8 @@ type Event struct {
 	DurationMs       int64  `json:"duration_ms,omitempty"`
 	SubscribeSubject string `json:"subscribe_subject,omitempty"`
 	PublishSubject   string `json:"publish_subject,omitempty"`
+	ReceivedPayload  any    `json:"received_payload,omitempty"`
+	ResponsePayload  any    `json:"response_payload,omitempty"`
 
 	// Additional structured context
 	// what is the metadata of the event?

@@ -417,6 +417,115 @@ func TestWithExceptionApplied(t *testing.T) {
 	assertEq(t, exc["message"], "applied")
 }
 
+// --- WithReceivedPayload / WithResponsePayload ---
+
+func TestWithReceivedPayloadValidJSON(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithReceivedPayload([]byte(`{"order_id":"abc","amount":42}`)))
+	})
+	payload, ok := ev["received_payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected received_payload to be a map, got %T: %v", ev["received_payload"], ev["received_payload"])
+	}
+	assertEq(t, payload["order_id"], "abc")
+	assertEq(t, payload["amount"], float64(42))
+}
+
+func TestWithReceivedPayloadInvalidJSON(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithReceivedPayload([]byte(`not json`)))
+	})
+	assertEq(t, ev["received_payload"], "not json")
+}
+
+func TestWithReceivedPayloadEmpty(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithReceivedPayload([]byte{}))
+	})
+	if _, ok := ev["received_payload"]; ok {
+		t.Fatal("expected received_payload to be omitted for empty bytes")
+	}
+}
+
+func TestWithResponsePayloadValidJSON(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithResponsePayload([]byte(`{"status":"ok"}`)))
+	})
+	payload, ok := ev["response_payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected response_payload to be a map, got %T: %v", ev["response_payload"], ev["response_payload"])
+	}
+	assertEq(t, payload["status"], "ok")
+}
+
+func TestWithResponsePayloadInvalidJSON(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithResponsePayload([]byte(`plain text`)))
+	})
+	assertEq(t, ev["response_payload"], "plain text")
+}
+
+func TestWithReceivedPayloadRedactsSensitiveKeys(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+		RedactKeys:  []string{"token"},
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithReceivedPayload([]byte(`{"order_id":"x","token":"secret"}`)))
+	})
+	payload, ok := ev["received_payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected received_payload to be a map")
+	}
+	assertEq(t, payload["token"], "[REDACTED]")
+	assertEq(t, payload["order_id"], "x")
+}
+
+func TestWithResponsePayloadRedactsSensitiveKeys(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+		RedactKeys:  []string{"password"},
+	}, func() {
+		Info(context.Background(), "fn", "msg",
+			WithResponsePayload([]byte(`{"result":"done","password":"hunter2"}`)))
+	})
+	payload, ok := ev["response_payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected response_payload to be a map")
+	}
+	assertEq(t, payload["password"], "[REDACTED]")
+	assertEq(t, payload["result"], "done")
+}
+
 // --- helpers ---
 
 type testError struct{ msg string }

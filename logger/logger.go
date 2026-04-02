@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"runtime/debug"
@@ -95,6 +96,34 @@ func WithPublishSubject(subject string) Option {
 	}
 }
 
+// WithReceivedPayload attaches the raw NATS inbound message body to the log entry.
+// If payload is valid JSON it is stored as a structured value; otherwise as a string.
+func WithReceivedPayload(payload []byte) Option {
+	return func(e *Event) {
+		e.ReceivedPayload = parsePayload(payload)
+	}
+}
+
+// WithResponsePayload attaches the outbound NATS response body to the log entry.
+// If payload is valid JSON it is stored as a structured value; otherwise as a string.
+func WithResponsePayload(payload []byte) Option {
+	return func(e *Event) {
+		e.ResponsePayload = parsePayload(payload)
+	}
+}
+
+// parsePayload tries to unmarshal bytes as JSON; falls back to plain string.
+func parsePayload(b []byte) any {
+	if len(b) == 0 {
+		return nil
+	}
+	var v any
+	if err := json.Unmarshal(b, &v); err == nil {
+		return v
+	}
+	return string(b)
+}
+
 // WithException populates the structured exception field.
 // If err is nil, this option does nothing.
 func WithException(err error) Option {
@@ -154,11 +183,24 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 		Interface("exception", ev.Exception).
 		Logger()
 
+	if m, ok := ev.ReceivedPayload.(map[string]any); ok {
+		ev.ReceivedPayload = redactMap(cfg.RedactKeys, m)
+	}
+	if m, ok := ev.ResponsePayload.(map[string]any); ok {
+		ev.ResponsePayload = redactMap(cfg.RedactKeys, m)
+	}
+
 	if ev.SubscribeSubject != "" {
 		ze = ze.With().Str("subscribe_subject", ev.SubscribeSubject).Logger()
 	}
 	if ev.PublishSubject != "" {
 		ze = ze.With().Str("publish_subject", ev.PublishSubject).Logger()
+	}
+	if ev.ReceivedPayload != nil {
+		ze = ze.With().Interface("received_payload", ev.ReceivedPayload).Logger()
+	}
+	if ev.ResponsePayload != nil {
+		ze = ze.With().Interface("response_payload", ev.ResponsePayload).Logger()
 	}
 	event := ze
 
