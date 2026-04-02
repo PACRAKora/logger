@@ -64,10 +64,12 @@ func (w *seqWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
 		return len(p), nil
 	}
 
+	// zerolog reuses its buffer after WriteLevel returns; copy before entering goroutine.
+	pCopy := bytes.Clone(p)
 	// Perform HTTP request asynchronously so logging does not block the main flow.
 	go func() {
 		var properties map[string]any
-		_ = json.Unmarshal(p, &properties) // ignore error; fall back to empty map
+		_ = json.Unmarshal(pCopy, &properties) // ignore error; fall back to empty map
 		properties = redactMap(w.redactKeys, properties)
 
 		payload := seqEventPayload{
