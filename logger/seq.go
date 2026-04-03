@@ -61,12 +61,12 @@ func (w *seqWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
 		event = redactMap(w.redactKeys, event)
 
 		// Remap zerolog fields to CLEF reserved fields.
-		if ts, ok := event["time"].(string); ok {
+		if ts, ok := event["timestamp"].(string); ok {
 			event["@t"] = ts
 		} else {
 			event["@t"] = time.Now().UTC().Format(time.RFC3339Nano)
 		}
-		delete(event, "time")
+		delete(event, "timestamp")
 
 		if msg, ok := event["message"].(string); ok {
 			event["@m"] = msg
