@@ -10,4 +10,3 @@ func WithTraceFromContext(ctx context.Context) Option {
 		_ = ctx
 	}
 }
-

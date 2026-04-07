@@ -18,15 +18,22 @@ This document is the **cross-language logging contract** for saga-based microser
 - `level` (`info` | `warn` | `error` | `critical`)
 - `service`
 - `environment`
-- `service_version`
 - `trace_id`
 - `message`
 
+#### Required on `warn`, `error`, `critical`
+
+- `function` — name of the function where the log originates
+- `error_path` — logical route/path identifier (e.g. `/saga/processPayment`)
+
 #### Strongly recommended
 
-- `span_id` (OpenTelemetry)
+- `span_id` — current span ID (set via context or OpenTelemetry)
+- `parent_id` — parent span ID for distributed tracing correlation
+- `correlation_id` — business transaction ID spanning multiple traces/services
 - `component` (`Orchestrator` | `Participant` | `Consumer` | `API`)
 - `event` (especially for saga lifecycle)
+- `actor_id`, `actor_type`, `actor_ip` — flat who-fields, directly filterable in Seq/Kibana/Grafana
 
 #### For saga execution
 
@@ -37,6 +44,28 @@ This document is the **cross-language logging contract** for saga-based microser
 
 - `metadata`: object with business context (order_id, amount, customer_id, etc.)
 - `exception`: object: `{ "type": "...", "message": "...", "stack": "..." }`
+
+#### Audit fields (Who / What)
+
+All audit fields are flat top-level strings for direct filterability in Seq/Kibana/Grafana.
+
+**Who:**
+- `actor_id` — user ID, service account, or job ID performing the action
+- `actor_type` — `"user"` | `"service"` | `"scheduler"` | `"system"`
+- `actor_ip` — originating IP address
+
+**What:**
+- `action` — `"create"` | `"update"` | `"delete"` | `"read"`
+- `resource_type` — resource category, e.g. `"payment"` | `"order"` | `"account"`
+- `resource_id` — specific entity acted upon
+- `outcome` — `"success"` | `"failure"` | `"partial"`
+
+#### NATS/messaging fields (optional)
+
+- `subscribe_subject` — NATS subject the service consumed this event from
+- `publish_subject` — NATS subject the service is publishing to
+- `received_payload` — inbound message body (JSON object or string); sensitive keys are redacted
+- `response_payload` — outbound response body (JSON object or string); sensitive keys are redacted
 
 ### Propagation contract
 
@@ -65,18 +94,28 @@ This document is the **cross-language logging contract** for saga-based microser
 
 ```go
 ctx := context.Background()
-ctx = logging.WithTraceID(ctx, "trace-a1b2c3d4")
+ctx = logger.WithTraceID(ctx, "trace-a1b2c3d4")
+ctx = logger.WithSpanID(ctx, "span-00112233")   // optional: manual span propagation
 
-logging.Warn(ctx, "processPayment", "/saga/processPayment", "retrying payment",
-    logging.WithComponent("Participant"),
-    logging.WithEvent("SagaStepRetrying"),
-    logging.WithRetryCount(1),
-    logging.WithDurationMs(245),
-    logging.WithMetadata(map[string]any{
-        "order_id": "order-2024-001",
-        "amount": 99.99,
-        "currency": "ZMW",
+logger.Warn(ctx, "processPayment", "/saga/processPayment", "retrying payment",
+    logger.WithEvent("SagaStepRetrying"),
+    logger.WithRetryCount(1),
+    logger.WithDurationMs(245),
+    logger.WithParentID("span-parent-0000"),
+    logger.WithMetadata(map[string]any{
+        "order_id":  "order-2024-001",
+        "amount":    99.99,
+        "currency":  "ZMW",
+        "component": "Participant",
     }),
+)
+
+// NATS-specific fields
+logger.Info(ctx, "handlePaymentEvent", "received payment event",
+    logger.WithSubscribeSubject("payments.process"),
+    logger.WithPublishSubject("payments.result"),
+    logger.WithReceivedPayload(inboundBytes),
+    logger.WithResponsePayload(outboundBytes),
 )
 ```
 
@@ -85,10 +124,34 @@ logging.Warn(ctx, "processPayment", "/saga/processPayment", "retrying payment",
 If your service uses OpenTelemetry, build with `-tags=otel` and add:
 
 ```go
-logging.Warn(ctx, "processPayment", "/saga/processPayment", "retrying payment",
-    logging.WithTraceFromContext(ctx),
+logger.Warn(ctx, "processPayment", "/saga/processPayment", "retrying payment",
+    logger.WithTraceFromContext(ctx),
 )
 ```
+
+This extracts `trace_id` from the active OTel span. When not using OTel, set `trace_id` and `span_id` manually via `WithTraceID` / `WithSpanID` on the context.
+
+### Seq integration
+
+Seq receives logs over **GELF UDP** (not HTTP). Configure via environment variables:
+
+```
+SEQ_ENABLE=true
+SEQ_URL=localhost:12201   # must be a GELF UDP input address
+SEQ_API_KEY=...           # unused with GELF transport; kept for backwards compatibility
+```
+
+Field mapping to GELF extras (`_` prefix):
+
+| Contract field | GELF extra key |
+|----------------|---------------|
+| `trace_id` | `_TraceId` |
+| `span_id` | `_SpanId` |
+| `parent_id` | `_ParentId` |
+| `metadata.*` | `_<key>` (flattened) |
+| all others | `_<field_name>` |
+
+Special mappings: `message` → GELF `Short`, `exception` → GELF `Full` (`type: message\nstack`). `timestamp`, `level`, and `exception` are excluded from extras.
 
 ---
 

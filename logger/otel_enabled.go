@@ -19,4 +19,3 @@ func WithTraceFromContext(ctx context.Context) Option {
 		e.TraceID = sc.TraceID().String()
 	}
 }
-

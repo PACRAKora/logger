@@ -10,8 +10,9 @@ type ctxKey string
 
 const (
 	// CONFIGURABLE: Context key names can be changed if needed.
-	ctxKeyTraceID ctxKey = "trace_id"
-	ctxKeySpanID  ctxKey = "span_id"
+	ctxKeyTraceID       ctxKey = "trace_id"
+	ctxKeySpanID        ctxKey = "span_id"
+	ctxKeyCorrelationID ctxKey = "correlation_id"
 )
 
 // WithTraceID attaches the given trace ID to the context.
@@ -49,6 +50,25 @@ func SpanIDFromContext(ctx context.Context) (context.Context, string) {
 		ctx = context.Background()
 	}
 	if v := ctx.Value(ctxKeySpanID); v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			return ctx, s
+		}
+	}
+	return ctx, ""
+}
+
+// WithCorrelationID attaches a business transaction correlation ID to the context.
+func WithCorrelationID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, ctxKeyCorrelationID, id)
+}
+
+// CorrelationIDFromContext extracts the correlation ID from the context.
+// Returns "" if not found.
+func CorrelationIDFromContext(ctx context.Context) (context.Context, string) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if v := ctx.Value(ctxKeyCorrelationID); v != nil {
 		if s, ok := v.(string); ok && s != "" {
 			return ctx, s
 		}

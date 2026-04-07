@@ -46,4 +46,3 @@ func main() {
 		logging.WithException(errors.New("compensation outbox unavailable")),
 	)
 }
-

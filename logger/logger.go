@@ -152,18 +152,60 @@ func WithParentID(id string) Option {
 	return func(e *Event) { e.ParentID = id }
 }
 
+// WithActorID sets the actor identity (user ID, service account, job ID).
+func WithActorID(id string) Option {
+	return func(e *Event) { e.ActorID = id }
+}
+
+// WithActorType sets the actor type ("user" | "service" | "scheduler" | "system").
+func WithActorType(t string) Option {
+	return func(e *Event) { e.ActorType = t }
+}
+
+// WithActorIP sets the originating IP address of the actor.
+func WithActorIP(ip string) Option {
+	return func(e *Event) { e.ActorIP = ip }
+}
+
+// WithAction sets the action performed ("create" | "update" | "delete" | "read").
+func WithAction(action string) Option {
+	return func(e *Event) { e.Action = action }
+}
+
+// WithResourceType sets the type of resource acted upon ("payment" | "order" | "account").
+func WithResourceType(rt string) Option {
+	return func(e *Event) { e.ResourceType = rt }
+}
+
+// WithResourceID sets the ID of the specific resource acted upon.
+func WithResourceID(id string) Option {
+	return func(e *Event) { e.ResourceID = id }
+}
+
+// WithOutcome sets the outcome of the action ("success" | "failure" | "partial").
+func WithOutcome(outcome string) Option {
+	return func(e *Event) { e.Outcome = outcome }
+}
+
+// WithCorrelationIDOption sets the correlation ID as an option, overriding any value from context.
+func WithCorrelationIDOption(id string) Option {
+	return func(e *Event) { e.CorrelationID = id }
+}
+
 func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, msg string, opts ...Option) {
 	cfg := ConfigOrDefault()
 	ctx, traceID := TraceIDFromContext(ctx)
 	_, spanID := SpanIDFromContext(ctx)
+	_, correlationID := CorrelationIDFromContext(ctx)
 
 	ev := &Event{
-		Service:     cfg.Service,
-		Environment: cfg.Env,
-		TraceID:     traceID,
-		SpanID:      spanID,
-		Function:    fnName,
-		ErrorPath:   errorPath,
+		Service:       cfg.Service,
+		Environment:   cfg.Env,
+		TraceID:       traceID,
+		SpanID:        spanID,
+		CorrelationID: correlationID,
+		Function:      fnName,
+		ErrorPath:     errorPath,
 	}
 
 	for _, opt := range opts {
@@ -198,6 +240,30 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 		ev.ResponsePayload = redactMap(cfg.RedactKeys, m)
 	}
 
+	if ev.CorrelationID != "" {
+		ze = ze.With().Str("correlation_id", ev.CorrelationID).Logger()
+	}
+	if ev.ActorID != "" {
+		ze = ze.With().Str("actor_id", ev.ActorID).Logger()
+	}
+	if ev.ActorType != "" {
+		ze = ze.With().Str("actor_type", ev.ActorType).Logger()
+	}
+	if ev.ActorIP != "" {
+		ze = ze.With().Str("actor_ip", ev.ActorIP).Logger()
+	}
+	if ev.Action != "" {
+		ze = ze.With().Str("action", ev.Action).Logger()
+	}
+	if ev.ResourceType != "" {
+		ze = ze.With().Str("resource_type", ev.ResourceType).Logger()
+	}
+	if ev.ResourceID != "" {
+		ze = ze.With().Str("resource_id", ev.ResourceID).Logger()
+	}
+	if ev.Outcome != "" {
+		ze = ze.With().Str("outcome", ev.Outcome).Logger()
+	}
 	if ev.SubscribeSubject != "" {
 		ze = ze.With().Str("subscribe_subject", ev.SubscribeSubject).Logger()
 	}
