@@ -147,15 +147,21 @@ func WithException(err error) Option {
 	}
 }
 
+// WithParentID sets the parent span ID for distributed tracing context.
+func WithParentID(id string) Option {
+	return func(e *Event) { e.ParentID = id }
+}
+
 func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, msg string, opts ...Option) {
 	cfg := ConfigOrDefault()
 	ctx, traceID := TraceIDFromContext(ctx)
-	_ = ctx // context is used for ID propagation; retained for future extension.
+	_, spanID := SpanIDFromContext(ctx)
 
 	ev := &Event{
 		Service:     cfg.Service,
 		Environment: cfg.Env,
 		TraceID:     traceID,
+		SpanID:      spanID,
 		Function:    fnName,
 		ErrorPath:   errorPath,
 	}
@@ -174,6 +180,8 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 	logger := Logger()
 	ze := logger.With().
 		Str("trace_id", ev.TraceID).
+		Str("span_id", ev.SpanID).
+		Str("parent_id", ev.ParentID).
 		Str("function", ev.Function).
 		Str("error_path", ev.ErrorPath).
 		Str("event", ev.Event).

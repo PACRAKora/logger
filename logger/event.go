@@ -16,7 +16,9 @@ type Event struct {
 	Service        string `json:"service"`
 	Environment    string `json:"environment,omitempty"`
 
-	TraceID string `json:"trace_id"`
+	TraceID  string `json:"trace_id"`
+	SpanID   string `json:"span_id,omitempty"`
+	ParentID string `json:"parent_id,omitempty"`
 
 	// event is the canonical field name for business/saga event names.
 	Event string `json:"event,omitempty"`

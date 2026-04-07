@@ -6,6 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/rs/zerolog v1.33.0
 	go.opentelemetry.io/otel/trace v1.42.0
+	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
 )
 
 require (

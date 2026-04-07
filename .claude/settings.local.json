@@ -8,7 +8,13 @@
       "Bash(go test:*)",
       "Bash(ls:*)",
       "mcp__plugin_context7_context7__resolve-library-id",
-      "mcp__plugin_context7_context7__query-docs"
+      "mcp__plugin_context7_context7__query-docs",
+      "WebFetch(domain:datalust.co)",
+      "WebSearch",
+      "WebFetch(domain:clef-json.org)",
+      "WebFetch(domain:github.com)",
+      "Bash(go get:*)",
+      "Bash(go mod:*)"
     ]
   }
 }

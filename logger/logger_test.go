@@ -170,7 +170,7 @@ func TestWithTraceIDGeneratesUUIDWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestTraceIDFromContextGeneratesWhenMissing(t *testing.T) {
+func TestTraceIDFromContextEmptyWhenMissing(t *testing.T) {
 	ev := captureLastEvent(t, Config{
 		Service:     "svc",
 		Env:         "test",
@@ -179,8 +179,8 @@ func TestTraceIDFromContextGeneratesWhenMissing(t *testing.T) {
 		Info(context.Background(), "fn", "msg")
 	})
 	id, _ := ev["trace_id"].(string)
-	if id == "" {
-		t.Fatal("expected auto-generated trace_id for bare context")
+	if id != "" {
+		t.Fatalf("expected empty trace_id for bare context, got %q", id)
 	}
 }
 
@@ -196,8 +196,8 @@ func TestTraceIDFromContextNilContext(t *testing.T) {
 	//nolint:staticcheck // intentional nil context test
 	ctx, id := TraceIDFromContext(nil)
 	_ = ctx
-	if id == "" {
-		t.Fatal("expected non-empty trace_id for nil context")
+	if id != "" {
+		t.Fatalf("expected empty trace_id for nil context, got %q", id)
 	}
 }
 

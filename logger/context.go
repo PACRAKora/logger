@@ -11,6 +11,7 @@ type ctxKey string
 const (
 	// CONFIGURABLE: Context key names can be changed if needed.
 	ctxKeyTraceID ctxKey = "trace_id"
+	ctxKeySpanID  ctxKey = "span_id"
 )
 
 // WithTraceID attaches the given trace ID to the context.
@@ -22,8 +23,13 @@ func WithTraceID(ctx context.Context, traceID string) context.Context {
 	return context.WithValue(ctx, ctxKeyTraceID, traceID)
 }
 
+// WithSpanID attaches the given span ID to the context.
+func WithSpanID(ctx context.Context, spanID string) context.Context {
+	return context.WithValue(ctx, ctxKeySpanID, spanID)
+}
+
 // TraceIDFromContext extracts the trace ID from the context.
-// If none is found, a new one is generated and attached.
+// Returns "" if not found.
 func TraceIDFromContext(ctx context.Context) (context.Context, string) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -33,7 +39,19 @@ func TraceIDFromContext(ctx context.Context) (context.Context, string) {
 			return ctx, s
 		}
 	}
-	id := uuid.NewString()
-	ctx = context.WithValue(ctx, ctxKeyTraceID, id)
-	return ctx, id
+	return ctx, ""
+}
+
+// SpanIDFromContext extracts the span ID from the context.
+// Returns "" if not found.
+func SpanIDFromContext(ctx context.Context) (context.Context, string) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if v := ctx.Value(ctxKeySpanID); v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			return ctx, s
+		}
+	}
+	return ctx, ""
 }

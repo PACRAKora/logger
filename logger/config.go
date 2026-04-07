@@ -42,12 +42,13 @@ type Config struct {
 	// CONFIGURABLE
 	EnableSeq bool
 
-	// SeqURL is the base URL of the Seq server (e.g. "http://localhost:5341").
+	// SeqURL is the GELF UDP address for Seq (e.g. "localhost:12201").
+	// Requires a GELF UDP input to be enabled in Seq.
 	// Can also be set via the SEQ_URL environment variable.
 	// CONFIGURABLE
 	SeqURL string
 
-	// SeqAPIKey is an optional API key for authenticating with Seq.
+	// SeqAPIKey is unused with GELF UDP transport and kept for backwards compatibility.
 	// Can also be set via the SEQ_API_KEY environment variable.
 	// CONFIGURABLE
 	SeqAPIKey string
