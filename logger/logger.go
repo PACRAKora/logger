@@ -152,14 +152,14 @@ func WithParentID(id string) Option {
 	return func(e *Event) { e.ParentID = id }
 }
 
-// WithActorID sets the actor identity (user ID, service account, job ID).
-func WithActorID(id string) Option {
-	return func(e *Event) { e.ActorID = id }
+// WithUserID sets the user ID performing the action.
+func WithUserID(id string) Option {
+	return func(e *Event) { e.UserID = id }
 }
 
-// WithActorType sets the actor type ("user" | "service" | "scheduler" | "system").
-func WithActorType(t string) Option {
-	return func(e *Event) { e.ActorType = t }
+// WithUserRole sets the user role ("user" | "service" | "scheduler" | "system").
+func WithUserRole(t string) Option {
+	return func(e *Event) { e.UserRole = t }
 }
 
 // WithActorIP sets the originating IP address of the actor.
@@ -170,16 +170,6 @@ func WithActorIP(ip string) Option {
 // WithAction sets the action performed ("create" | "update" | "delete" | "read").
 func WithAction(action string) Option {
 	return func(e *Event) { e.Action = action }
-}
-
-// WithResourceType sets the type of resource acted upon ("payment" | "order" | "account").
-func WithResourceType(rt string) Option {
-	return func(e *Event) { e.ResourceType = rt }
-}
-
-// WithResourceID sets the ID of the specific resource acted upon.
-func WithResourceID(id string) Option {
-	return func(e *Event) { e.ResourceID = id }
 }
 
 // WithOutcome sets the outcome of the action ("success" | "failure" | "partial").
@@ -243,23 +233,17 @@ func logWithLevel(ctx context.Context, level zerolog.Level, fnName, errorPath, m
 	if ev.CorrelationID != "" {
 		ze = ze.With().Str("correlation_id", ev.CorrelationID).Logger()
 	}
-	if ev.ActorID != "" {
-		ze = ze.With().Str("actor_id", ev.ActorID).Logger()
+	if ev.UserID != "" {
+		ze = ze.With().Str("user_id", ev.UserID).Logger()
 	}
-	if ev.ActorType != "" {
-		ze = ze.With().Str("actor_type", ev.ActorType).Logger()
+	if ev.UserRole != "" {
+		ze = ze.With().Str("user_role", ev.UserRole).Logger()
 	}
 	if ev.ActorIP != "" {
 		ze = ze.With().Str("actor_ip", ev.ActorIP).Logger()
 	}
 	if ev.Action != "" {
 		ze = ze.With().Str("action", ev.Action).Logger()
-	}
-	if ev.ResourceType != "" {
-		ze = ze.With().Str("resource_type", ev.ResourceType).Logger()
-	}
-	if ev.ResourceID != "" {
-		ze = ze.With().Str("resource_id", ev.ResourceID).Logger()
 	}
 	if ev.Outcome != "" {
 		ze = ze.With().Str("outcome", ev.Outcome).Logger()

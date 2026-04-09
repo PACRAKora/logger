@@ -33,7 +33,7 @@ This document is the **cross-language logging contract** for saga-based microser
 - `correlation_id` — business transaction ID spanning multiple traces/services
 - `component` (`Orchestrator` | `Participant` | `Consumer` | `API`)
 - `event` (especially for saga lifecycle)
-- `actor_id`, `actor_type`, `actor_ip` — flat who-fields, directly filterable in Seq/Kibana/Grafana
+- `user_id`, `user_role`, `actor_ip` — flat who-fields, directly filterable in Seq/Kibana/Grafana
 
 #### For saga execution
 
@@ -50,14 +50,12 @@ This document is the **cross-language logging contract** for saga-based microser
 All audit fields are flat top-level strings for direct filterability in Seq/Kibana/Grafana.
 
 **Who:**
-- `actor_id` — user ID, service account, or job ID performing the action
-- `actor_type` — `"user"` | `"service"` | `"scheduler"` | `"system"`
+- `user_id` — user ID performing the action
+- `user_role` — `"user"` | `"service"` | `"scheduler"` | `"system"`
 - `actor_ip` — originating IP address
 
 **What:**
 - `action` — `"create"` | `"update"` | `"delete"` | `"read"`
-- `resource_type` — resource category, e.g. `"payment"` | `"order"` | `"account"`
-- `resource_id` — specific entity acted upon
 - `outcome` — `"success"` | `"failure"` | `"partial"`
 
 #### NATS/messaging fields (optional)

@@ -34,15 +34,13 @@ type Event struct {
 	ResponsePayload  any    `json:"response_payload,omitempty"`
 
 	// Who — actor identity (flat for direct filterability)
-	ActorID   string `json:"actor_id,omitempty"`   // user ID, service account, job ID
-	ActorType string `json:"actor_type,omitempty"` // "user" | "service" | "scheduler" | "system"
-	ActorIP   string `json:"actor_ip,omitempty"`   // originating IP
+	UserID   string `json:"user_id,omitempty"`   // user ID performing the action
+	UserRole string `json:"user_role,omitempty"` // "user" | "service" | "scheduler" | "system"
+	ActorIP  string `json:"actor_ip,omitempty"`  // originating IP
 
 	// What — action on a resource (flat for direct filterability)
-	Action       string `json:"action,omitempty"`        // "create" | "update" | "delete" | "read"
-	ResourceType string `json:"resource_type,omitempty"` // "payment" | "order" | "account"
-	ResourceID   string `json:"resource_id,omitempty"`   // specific entity acted upon
-	Outcome      string `json:"outcome,omitempty"`       // "success" | "failure" | "partial"
+	Action  string `json:"action,omitempty"`  // "create" | "update" | "delete" | "read"
+	Outcome string `json:"outcome,omitempty"` // "success" | "failure" | "partial"
 
 	// Correlation — ties events across services/traces for one business transaction
 	CorrelationID string `json:"correlation_id,omitempty"`
