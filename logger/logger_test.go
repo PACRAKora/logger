@@ -271,7 +271,7 @@ func TestEnableFileTrueCreatesFile(t *testing.T) {
 
 	path := filepath.Join(tmp, "app.log")
 	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("expected app.log to exist when EnableFile=true: %v", err)
+		t.Fatalf("expected app.log to exist when Enablesile=true: %v", err)
 	}
 }
 
@@ -327,6 +327,9 @@ func TestWithExceptionSetsFields(t *testing.T) {
 	if exc["message"] != "boom" {
 		t.Fatalf("expected exception.message=boom, got %v", exc["message"])
 	}
+	if exc["stack"] != nil {
+		t.Fatalf("expected exception.stack to be absent with WithException, got %v", exc["stack"])
+	}
 }
 
 func TestWithExceptionContextCanceled(t *testing.T) {
@@ -380,6 +383,46 @@ func TestRedactMapEmptyRedactKeys(t *testing.T) {
 	}
 }
 
+func TestRedactMapNestedMap(t *testing.T) {
+	m := map[string]any{
+		"payment": map[string]any{
+			"card_number": "4111111111111111",
+			"amount":      100,
+		},
+	}
+	result := redactMap([]string{"card_number"}, m)
+	nested, ok := result["payment"].(map[string]any)
+	if !ok {
+		t.Fatal("expected nested payment map to remain a map")
+	}
+	if nested["card_number"] != "[REDACTED]" {
+		t.Fatalf("expected nested card_number to be redacted, got %v", nested["card_number"])
+	}
+	if nested["amount"] != 100 {
+		t.Fatalf("expected non-sensitive key to be preserved, got %v", nested["amount"])
+	}
+}
+
+func TestRedactMapDeeplyNested(t *testing.T) {
+	m := map[string]any{
+		"outer": map[string]any{
+			"inner": map[string]any{
+				"token": "super-secret",
+				"id":    "abc",
+			},
+		},
+	}
+	result := redactMap([]string{"token"}, m)
+	outer, _ := result["outer"].(map[string]any)
+	inner, _ := outer["inner"].(map[string]any)
+	if inner["token"] != "[REDACTED]" {
+		t.Fatalf("expected deeply nested token to be redacted, got %v", inner["token"])
+	}
+	if inner["id"] != "abc" {
+		t.Fatalf("expected deeply nested id to be preserved, got %v", inner["id"])
+	}
+}
+
 func TestRedactMapCaseInsensitive(t *testing.T) {
 	m := map[string]any{"TOKEN": "secret"}
 	result := redactMap([]string{"token"}, m)
@@ -399,6 +442,25 @@ func TestWithRetryCountApplied(t *testing.T) {
 		Info(context.Background(), "fn", "msg", WithRetryCount(3))
 	})
 	assertEq(t, ev["retry_count"], float64(3))
+}
+
+func TestWithExceptionStackIncludesStack(t *testing.T) {
+	ev := captureLastEvent(t, Config{
+		Service:     "svc",
+		Env:         "test",
+		ConsoleJSON: true,
+	}, func() {
+		Error(context.Background(), "fn", "/path", "err",
+			WithExceptionStack(&testError{msg: "stack-boom"}))
+	})
+	exc, _ := ev["exception"].(map[string]any)
+	if exc == nil {
+		t.Fatal("expected exception object")
+	}
+	stack, _ := exc["stack"].(string)
+	if stack == "" {
+		t.Fatal("expected exception.stack to be non-empty when using WithExceptionStack")
+	}
 }
 
 func TestWithExceptionApplied(t *testing.T) {

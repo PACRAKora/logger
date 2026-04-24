@@ -124,9 +124,34 @@ func parsePayload(b []byte) any {
 	return string(b)
 }
 
-// WithException populates the structured exception field.
+// WithException populates the structured exception field with error type and message.
+// Stack traces are not included by default — use WithExceptionStack to opt in.
 // If err is nil, this option does nothing.
 func WithException(err error) Option {
+	return func(e *Event) {
+		if err == nil {
+			return
+		}
+		typ := fmt.Sprintf("%T", err)
+		msg := err.Error()
+		if errors.Is(err, context.Canceled) {
+			typ = "context.Canceled"
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			typ = "context.DeadlineExceeded"
+		}
+		e.Exception = &Exception{
+			Type:    typ,
+			Message: msg,
+		}
+	}
+}
+
+// WithExceptionStack populates the structured exception field and captures a full
+// Go runtime stack trace. Use only when the trace is operationally necessary;
+// stack traces expose internal file paths and package structure.
+// If err is nil, this option does nothing.
+func WithExceptionStack(err error) Option {
 	return func(e *Event) {
 		if err == nil {
 			return
@@ -284,7 +309,8 @@ func criticalZerologLevel() zerolog.Level {
 	return zerolog.Level(99)
 }
 
-// redactMap masks values whose keys match redactKeys. Used by both the logger and seq writer.
+// redactMap masks values whose keys match redactKeys. Redaction is recursive —
+// nested maps are also masked. Used by both the logger and seq writer.
 func redactMap(redactKeys []string, m map[string]any) map[string]any {
 	if len(m) == 0 || len(redactKeys) == 0 {
 		return m
@@ -301,10 +327,18 @@ func redactMap(redactKeys []string, m map[string]any) map[string]any {
 		return m
 	}
 
+	return redactMapWithSet(redactSet, m)
+}
+
+func redactMapWithSet(redactSet map[string]struct{}, m map[string]any) map[string]any {
 	out := make(map[string]any, len(m))
 	for k, v := range m {
 		if _, ok := redactSet[strings.ToLower(k)]; ok {
 			out[k] = "[REDACTED]"
+			continue
+		}
+		if nested, ok := v.(map[string]any); ok {
+			out[k] = redactMapWithSet(redactSet, nested)
 			continue
 		}
 		out[k] = v

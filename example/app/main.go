@@ -17,7 +17,7 @@ func main() {
 		Service:     "pacra-logger-example",
 		Env:         "development",
 		ConsoleJSON: false,
-		RedactKeys:  []string{"password", "token", "authorization", "api_key", "card_number", "cvv"},
+		RedactKeys:  []string{"password", "token", "authorization", "api_key", "secret", "credential"},
 
 		// CONFIGURABLE: Time format for pretty console output.
 		TimeFormat: time.RFC3339,
@@ -28,20 +28,20 @@ func main() {
 
 	logging.Info(ctx, "main", "application started")
 
-	logging.Warn(ctx, "processMessage", "/handlers/processMessage", "retrying message",
+	logging.Warn(ctx, "processMessage", "/service/operation", "retrying message",
 		logging.WithEvent("SagaStepRetrying"),
 		logging.WithRetryCount(1),
 		logging.WithDurationMs(245),
 		logging.WithMetadata(map[string]any{"order_id": "order-2024-001"}),
 	)
 
-	logging.Error(ctx, "processMessage", "/handlers/processMessage", "failed to handle message",
+	logging.Error(ctx, "processMessage", "/service/operation", "failed to handle message",
 		logging.WithEvent("SagaStepFailed"),
 		logging.WithRetryCount(3),
 		logging.WithException(errors.New("payment gateway timeout")),
 	)
 
-	logging.Critical(ctx, "processMessage", "/handlers/processMessage", "compensation failed",
+	logging.Critical(ctx, "processMessage", "/service/operation", "compensation failed",
 		logging.WithEvent("CompensationFailed"),
 		logging.WithException(errors.New("compensation outbox unavailable")),
 	)

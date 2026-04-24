@@ -18,3 +18,8 @@ logs/
 
 # Claude Code project instructions (internal tool config)
 CLAUDE.md
+
+# Internal architecture documents — not for public consumers
+LOGGING.md
+logger/CONTRACT.md
+logger/README.md

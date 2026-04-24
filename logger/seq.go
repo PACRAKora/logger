@@ -20,8 +20,12 @@ type seqWriter struct {
 }
 
 // newSeqWriter constructs a seqWriter using GELF UDP transport.
-// SeqURL must be a UDP address (e.g. "localhost:12201").
+// SeqURL must be a UDP address in the form "<seq-host>:<port>".
 // Returns nil when Seq is disabled or the address is empty.
+//
+// SECURITY: UDP transport is unencrypted and unauthenticated. Log data is
+// transmitted in plaintext. Restrict access using a private network or VPN.
+// For confidentiality and integrity guarantees, replace with a TCP+TLS writer.
 func newSeqWriter(cfg Config) zerolog.LevelWriter {
 	if !cfg.EnableSeq || cfg.SeqURL == "" {
 		return nil
