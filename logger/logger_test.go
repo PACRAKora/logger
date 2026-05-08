@@ -194,8 +194,7 @@ func TestTraceIDFromContextNilContext(t *testing.T) {
 		}
 	}()
 	//nolint:staticcheck // intentional nil context test
-	ctx, id := TraceIDFromContext(nil)
-	_ = ctx
+	_, id := TraceIDFromContext(nil)
 	if id != "" {
 		t.Fatalf("expected empty trace_id for nil context, got %q", id)
 	}
